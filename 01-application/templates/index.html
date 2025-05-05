@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Echo Server</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Echo Server</h1>
+        <p><strong>Имя хоста:</strong> {{ hostname }}</p>
+        <p><strong>IP-адрес:</strong> {{ ip_address }}</p>
+        <p><strong>Автор:</strong> {{ author }}</p>
+    </div>
+</body>
+</html>

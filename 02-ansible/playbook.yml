@@ -1,0 +1,120 @@
+---
+- name: Install Docker and deploy Echo Server with Nginx load balancer
+  hosts: all
+  become: true
+  vars:
+    docker_image: goldraven/echo-server:latest
+    container_count: 3
+    container_base_port: 8001
+    nginx_port: 80
+    load_balancing_algorithm: round_robin 
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages for Docker
+      package:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/{{ ansible_distribution | lower }}/gpg
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} stable
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install docker-ce
+      package:
+        name: docker-ce
+        state: present
+
+    - name: Ensure Docker service is started and enabled
+      service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Install pip for Python
+      package:
+        name: python3-pip
+        state: present
+
+    - name: Install Docker Python module
+      pip:
+        name: docker
+        state: present
+
+    - name: Log into Docker Hub
+      docker_login:
+        username: goldraven
+        password: "{{ docker_hub_password }}"  
+      no_log: true
+
+    - name: Pull Docker image
+      docker_image:
+        name: "{{ docker_image }}"
+        source: pull
+
+    - name: Run Echo Server containers
+      docker_container:
+        name: "echo-server-{{ item }}"
+        image: "{{ docker_image }}"
+        state: started
+        restart_policy: always
+        published_ports:
+          - "{{ container_base_port + item }}:8000"
+        env:
+          AUTHOR: "Container {{ item + 1 }} of {{ container_count }}"
+      loop: "{{ range(container_count) | list }}"
+
+    - name: Install Nginx
+      package:
+        name: nginx
+        state: present
+
+    - name: Configure Nginx as load balancer
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/echo-server
+      notify: Restart Nginx
+
+    - name: Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/echo-server
+        dest: /etc/nginx/sites-enabled/echo-server
+        state: link
+      notify: Restart Nginx
+
+    - name: Remove default Nginx site if it exists
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: Restart Nginx
+
+    - name: Ensure Nginx is started and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+  handlers:
+    - name: Restart Nginx
+      service:
+        name: nginx
+        state: restarted
