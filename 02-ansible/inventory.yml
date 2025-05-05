@@ -2,8 +2,8 @@
 all:
   hosts:
     echo_server:
-      ansible_host: YOUR_SERVER_IP
-      ansible_user: YOUR_SSH_USER
+      ansible_host: 82.202.158.202 
+      ansible_user: user1       
 
   vars:
-    docker_hub_password: YOUR_DOCKER_HUB_PASSWORD  
+    docker_hub_password: "ваш_пароль_от_Docker_Hub"  
