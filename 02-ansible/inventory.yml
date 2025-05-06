@@ -6,4 +6,4 @@ all:
       ansible_become: yes
       ansible_become_method: sudo
   vars:
-    docker_hub_password: "Razvilka1+2"
+    docker_hub_password: #your-docker-password
